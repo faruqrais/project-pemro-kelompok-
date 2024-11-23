@@ -2,6 +2,7 @@
 #include <string.h>
 
 #define MAX_ITEMS 100
+#define MAX_TRANSAKSI 100
 
 typedef struct {
     char name[50];
@@ -12,6 +13,17 @@ typedef struct {
 
 Item store[MAX_ITEMS];
 int itemCount = 0;
+
+typedef struct {
+    char itemName[50];
+    int quantity;
+    float totalPrice;
+    float diskon;
+    float totalSetelahDiskon;
+} Laporan;
+
+Laporan laporan[MAX_TRANSAKSI];
+int transaksiCount = 0;
 
 // Fungsi login
 int login() {
@@ -119,6 +131,32 @@ void tambahstock() {
     printf("Stok berhasil ditambahkan!\n");
 }
 
+// Fungsi untuk mengurangi stok barang
+void kurangiStock() {
+    int index, quantityToReduce;
+
+    tampilanbarang();  // Menampilkan semua barang yang ada di toko
+
+    printf("Masukkan nomor barang yang ingin dikurangi stoknya: ");
+    scanf("%d", &index);
+
+    if (index < 1 || index > itemCount) {
+        printf("Nomor barang tidak valid.\n");
+        return;
+    }
+
+    printf("Masukkan jumlah stok yang ingin dikurangi: ");
+    scanf("%d", &quantityToReduce);
+
+    if (quantityToReduce > store[index - 1].stock) {
+        printf("Jumlah pengurangan stok melebihi stok yang ada. Stok saat ini: %d\n", store[index - 1].stock);
+        return;
+    }
+
+    store[index - 1].stock -= quantityToReduce;
+    printf("Stok barang berhasil dikurangi. Stok tersisa: %d\n", store[index - 1].stock);
+}
+
 // Fungsi untuk menghitung dan menampilkan poin member
 void memberInfo() {
     char nama[50];
@@ -155,10 +193,10 @@ void memberInfo() {
 // Fungsi untuk menghitung pembayaran
 void pembayaran() {
     int itemIndex, quantity;
-    float totalBayar = 0;
+    float totalBayar = 0, diskon = 0, totalSetelahDiskon;
 
     printf("\n===== PROSES PEMBAYARAN =====\n");
-    tampilanbarang();
+    tampilanbarang();  // Menampilkan daftar barang yang tersedia
 
     printf("Masukkan nomor barang yang ingin dibeli: ");
     scanf("%d", &itemIndex);
@@ -171,8 +209,9 @@ void pembayaran() {
     printf("Masukkan jumlah barang yang ingin dibeli: ");
     scanf("%d", &quantity);
 
+    // Memeriksa apakah stok cukup
     if (quantity > store[itemIndex - 1].stock) {
-        printf("Stok tidak cukup.\n");
+        printf("Stok tidak cukup. Stok saat ini: %d\n", store[itemIndex - 1].stock);
         return;
     }
 
@@ -180,10 +219,46 @@ void pembayaran() {
     totalBayar = store[itemIndex - 1].price * quantity;
     printf("Total harga untuk %d %s adalah: %.2f\n", quantity, store[itemIndex - 1].name, totalBayar);
 
-    // Mengurangi stok barang
+    // Cek diskon jika total pembelian memenuhi syarat
+    if (totalBayar >= 200000) {
+        diskon = 0.10 * totalBayar;  // Diskon 10%
+        totalSetelahDiskon = totalBayar - diskon;
+        printf("Anda mendapatkan diskon 10%%: -%.2f\n", diskon);
+        printf("Total setelah diskon: %.2f\n", totalSetelahDiskon);
+    } else {
+        totalSetelahDiskon = totalBayar;
+    }
+
+    // Mengurangi stok barang sesuai dengan jumlah yang dibeli
     store[itemIndex - 1].stock -= quantity;
 
+    // Mencatat laporan penjualan
+    strcpy(laporan[transaksiCount].itemName, store[itemIndex - 1].name);
+    laporan[transaksiCount].quantity = quantity;
+    laporan[transaksiCount].totalPrice = totalBayar;
+    laporan[transaksiCount].diskon = diskon;
+    laporan[transaksiCount].totalSetelahDiskon = totalSetelahDiskon;
+    transaksiCount++;
+
     printf("Pembayaran berhasil! Stok barang yang tersisa: %d\n", store[itemIndex - 1].stock);
+    printf("Total yang harus dibayar: %.2f\n", totalSetelahDiskon);
+}
+
+// Fungsi untuk menampilkan laporan penjualan
+void tampilkanLaporanPenjualan() {
+    printf("\n===== LAPORAN PENJUALAN =====\n");
+    if (transaksiCount == 0) {
+        printf("Belum ada transaksi.\n");
+    } else {
+        for (int i = 0; i < transaksiCount; i++) {
+            printf("Barang: %s\n", laporan[i].itemName);
+            printf("Jumlah: %d\n", laporan[i].quantity);
+            printf("Total Harga: %.2f\n", laporan[i].totalPrice);
+            printf("Diskon: %.2f\n", laporan[i].diskon);
+            printf("Total Setelah Diskon: %.2f\n", laporan[i].totalSetelahDiskon);
+            printf("---------------------------\n");
+        }
+    }
 }
 
 // Menu utama
@@ -196,9 +271,11 @@ void menu() {
         printf("2. Tambah Barang Baru\n");
         printf("3. Hapus Barang\n");
         printf("4. Tambah Stok Barang\n");
-        printf("5. Masukkan Member\n");
-        printf("6. Proses Pembayaran\n");
-        printf("7. Keluar\n");
+        printf("5. Mengurangi Stok Barang\n");
+        printf("6. Masukkan Member\n");
+        printf("7. Proses Pembayaran\n");
+        printf("8. Laporan Penjualan\n");
+        printf("9. Keluar\n");
         printf("Pilih menu: ");
         scanf("%d", &choice);
 
@@ -216,12 +293,18 @@ void menu() {
                 tambahstock();
                 break;
             case 5:
-                memberInfo();
+                kurangiStock();
                 break;
             case 6:
-                pembayaran();  // Fungsi untuk pembayaran
+                memberInfo();
                 break;
             case 7:
+                pembayaran();
+                break;
+            case 8:
+                tampilkanLaporanPenjualan(); // Menampilkan laporan penjualan
+                break;
+            case 9:
                 printf("Terima kasih telah menggunakan program ini!\n");
                 return;
             default:
