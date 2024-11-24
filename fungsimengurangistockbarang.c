@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 // Fungsi untuk mengurangi stok barang
 void kurangiStock() {
     int index, quantityToReduce;
